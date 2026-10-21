@@ -16,7 +16,7 @@ import { OllamaRuntime } from './runtime/ollama.ts';
 import { Pipeline, isVerifyTask, readRunState, type PipelineResult } from './pipeline.ts';
 import { isSmallPlan } from './plan.ts';
 import { createDemoRepo, createFeatureRepo, createWebRepo, demoRuntime, detectDemo, featureRuntime, FEATURE_GOAL } from './demo.ts';
-import { ensureRepo, isRepo, hasUncommitted } from './git.ts';
+import { ensureRepo, gitScope, isRepo, hasUncommitted } from './git.ts';
 import { checkReadiness } from './readiness.ts';
 import { applyRun, changedFiles, readMeta, runDiff, unapplyRun, writeMeta } from './apply.ts';
 import { dropHandoff, handoffChanges, handoffFiles, humanDir, openInEditor, prepareHandoff } from './handoff.ts';
@@ -181,13 +181,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
         /* битый package.json */
       }
     }
-    return { path: abs, exists: true, repo, dirty: repo ? await hasUncommitted(abs) : false, runs: listRuns(abs), demo: detectDemo(abs), hasTests, readiness: checkReadiness(abs, repo) };
+    const scope = repo ? await gitScope(abs) : null;
+    const runs = [...listRuns(abs), ...(scope ? listRuns(scope.root) : [])].sort((a, b) => b.id.localeCompare(a.id));
+    return { path: abs, exists: true, repo, dirty: repo ? await hasUncommitted(abs) : false, runs, demo: detectDemo(abs), hasTests, readiness: checkReadiness(abs, repo) };
   }
 
   async function startRun(body: Record<string, unknown>, fromEval = false): Promise<{ runId: string; done: Promise<PipelineResult> }> {
     if (run && !run.finished) throw new HttpError(409, 'Уже идёт прогон. Дождись конца или нажми «Стоп».');
     if (evalState?.running && !fromEval) throw new HttpError(409, 'Идёт экзамен — дождись его конца.');
-    const repo = path.resolve(String(body.repo ?? ''));
+    let repo = path.resolve(String(body.repo ?? ''));
     let goal = String(body.goal ?? '').trim();
     if (!body.repo || !goal) throw new HttpError(400, 'Нужны папка проекта и цель.');
     if (goal === 'shop-demo') goal = FEATURE_GOAL;
@@ -200,6 +202,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
       if (body.initGit === false) throw new HttpError(400, 'Папка не под git, а создавать репозиторий запрещено настройками.');
       await ensureRepo(repo);
     }
+    // подпапка большого репозитория (web/ внутри проекта) — работаем от корня репозитория, правки — в этой папке
+    const scope = await gitScope(repo);
+    if (scope) repo = scope.root;
     const runtime = makeRuntime(mock, goal);
     if (!mock && runtime instanceof OllamaRuntime && !(await runtime.ping())) {
       throw new HttpError(400, 'Ollama не отвечает на 127.0.0.1:11434. Запусти Ollama или включи учебную модель.');
@@ -224,6 +229,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
     };
     state.pipeline = new Pipeline({
       repo,
+      focus: scope?.focus,
       goal,
       runtime,
       catalog,
@@ -534,6 +540,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
 
       const body = req.method === 'POST' ? await readJson(req) : {};
       const q = (k: string) => url.searchParams.get(k) ?? '';
+      // прогоны в подпапке репозитория (web/) лежат в корне репозитория — история, отчёт, применение ищут их там
+      if (!['/api/repo', '/api/run', '/api/demo'].includes(url.pathname)) {
+        const id = String(body.id ?? body.runId ?? q('id') ?? '');
+        if (typeof body.repo === 'string' && body.repo) body.repo = await resolveRepo(body.repo, id);
+        if (url.searchParams.get('repo')) url.searchParams.set('repo', await resolveRepo(q('repo'), id));
+      }
 
       switch (`${req.method} ${url.pathname}`) {
         case 'GET /api/models':
@@ -776,6 +788,15 @@ function readJsonl(file: string): unknown[] {
 }
 
 /** Прошлые прогоны проекта: цель, итог, время. */
+/** Папка, где лежат прогоны: сама папка, если прогон там есть, иначе корень git-репозитория, в котором она лежит. */
+async function resolveRepo(repo: string, id = ''): Promise<string> {
+  const abs = path.resolve(repo);
+  if (id && /^[\w-]+$/.test(id) && existsSync(path.join(abs, '.agentyard', 'runs', id))) return abs;
+  if (!existsSync(abs)) return abs;
+  const scope = await gitScope(abs);
+  return scope ? scope.root : abs;
+}
+
 export function listRuns(repo: string): { id: string; goal: string; done: number | null; human: number | null; seconds: number | null; resumable: boolean; finished: boolean; applied: string | null; issue: { key: string; url: string } | null; pr: string | null }[] {
   const dir = path.join(repo, '.agentyard', 'runs');
   if (!existsSync(dir)) return [];

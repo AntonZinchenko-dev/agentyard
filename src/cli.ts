@@ -16,7 +16,7 @@ import { Stats } from './stats.ts';
 import { OllamaRuntime } from './runtime/ollama.ts';
 import { Pipeline } from './pipeline.ts';
 import { createDemoRepo, createFeatureRepo, demoRuntime, featureRuntime, FEATURE_GOAL } from './demo.ts';
-import { ensureRepo, isRepo, hasUncommitted } from './git.ts';
+import { ensureRepo, gitScope, isRepo, hasUncommitted } from './git.ts';
 import { AGENT } from './config.ts';
 import type { Plan } from './types.ts';
 
@@ -174,7 +174,7 @@ async function cmdRun(argv: string[]): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const repo = path.resolve(values.repo);
+  let repo = path.resolve(values.repo);
   if (values.goal === 'shop-demo') values.goal = FEATURE_GOAL;
 
   if (!(await isRepo(repo))) {
@@ -183,6 +183,11 @@ async function cmdRun(argv: string[]): Promise<void> {
     }
     await ensureRepo(repo);
     console.log('Создан git-репозиторий с исходным состоянием проекта.');
+  }
+  const scope = await gitScope(repo);
+  if (scope) {
+    console.log(`Папка ${scope.focus}/ — часть git-репозитория ${scope.root}: работаю от его корня, правки — в ${scope.focus}/.`);
+    repo = scope.root;
   }
   if (await hasUncommitted(repo)) {
     console.log('Внимание: в проекте есть незакоммиченные изменения — конвейер возьмёт за основу последний коммит.\n');
@@ -199,6 +204,7 @@ async function cmdRun(argv: string[]): Promise<void> {
 
   const pipeline = new Pipeline({
     repo,
+    focus: scope?.focus,
     goal: values.goal ?? 'План из файла',
     learnedDir: values.mock ? null : path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'learned'),
     runtime,

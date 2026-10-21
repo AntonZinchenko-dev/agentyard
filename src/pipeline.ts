@@ -16,7 +16,7 @@ import { canGoDirect, inputBudget, progressText, runAgent, runDirect, type Agent
 import { countErrorKeys, doneWhenProblems, errorLines, newErrors, runCascade, runCommand, type CommandResult } from './checks.ts';
 import { BaselineRunner, compareOutcomes } from './engine/baseline.ts';
 import { dependencyDirs, isProjectWide, nodeDirFor, scopedCommands, testCommandsFor } from './engine/workspace.ts';
-import { missingPackages, triage } from './engine/triage.ts';
+import { importedPackageNames, missingPackages, triage } from './engine/triage.ts';
 import { decide, stageOf, type AttemptLog } from './engine/policy.ts';
 import { describeStumble } from './engine/stumble.ts';
 import { chunkText, extractText } from './engine/extract.ts';
@@ -34,7 +34,7 @@ import { Journal } from './journal.ts';
 import { goalTerms, renderHits, searchRepo } from './context.ts';
 import { pickRecipes } from './recipes.ts';
 import { entityPairs, matchFiles } from './replicate.ts';
-import { addDependencies, dependencyVersions, installPackages, pkgName } from './install.ts';
+import { addDependencies, dependencyVersions, installPackages, installedVersion, missingPeers, pkgName } from './install.ts';
 import { ASSET_RE } from './tools/patch.ts';
 import { colorFacts, cssOverrideWarnings } from './css.ts';
 import { listFiles } from './tools/fs.ts';
@@ -47,6 +47,8 @@ import type { CatalogModel, CheckResult, Hardware, LiveEvent, Plan, PlannedTask,
 
 export interface PipelineOptions {
   repo: string;
+  /** Человек выбрал подпапку репозитория (web/): repo — корень репозитория, правки — в этой папке. */
+  focus?: string;
   /** Цель обычными словами или "fix-tests". */
   goal: string;
   runtime: Runtime;
@@ -426,6 +428,7 @@ export class Pipeline {
       hardware: `${hw.gpuName ?? 'без видеокарты'}, ${hw.vramTotalGb} ГБ видеопамяти, ${hw.ramTotalGb} ГБ RAM`,
       team: this.team.models.map((m) => m.ollamaTag),
     });
+    if (this.o.focus) this.journal.record({ type: 'self-help', taskId: '—', what: `папка ${this.o.focus}/ — часть git-репозитория ${this.o.repo}: работаю от его корня (ветки и откат — там), правки — в ${this.o.focus}/` });
 
     this.emit({ kind: 'phase', phase: 'map', team: this.team.models.map((m) => m.ollamaTag) });
     // Разведка без модели
@@ -527,6 +530,7 @@ export class Pipeline {
 
     const done = this.graph.byStatus('done').map((t) => t.id);
     const human = this.graph.byStatus('human').map((t) => ({ id: t.id, why: this.humanReasons.get(t.id) ?? 'нужно решение человека' }));
+    await this.declareDependencies().catch((e) => this.journal.record({ type: 'self-help', taskId: '—', what: `проверить зависимости в package.json не получилось: ${(e as Error).message.slice(0, 200)}` }));
     await this.cleanupWorktrees();
 
     // доставка: что изменилось и (по желанию) сразу в ветку пользователя
@@ -797,8 +801,15 @@ export class Pipeline {
       }
     }
     const q = goalTerms(this.o.goal);
-    const hits = searchRepo(this.o.repo, this.map.files, q);
-    const contextText = renderHits(hits, q);
+    const found = searchRepo(this.o.repo, this.map.files, q);
+    const focus = this.o.focus;
+    // выбрана подпапка репозитория — ищем в ней; ничего не нашлось — по всему проекту
+    const inFocus = focus ? found.filter((h) => h.file.startsWith(`${focus}/`)) : found;
+    const hits = inFocus.length ? inFocus : found;
+    const contextText = [
+      ...(focus ? [`Человек выбрал папку ${focus}/ — это часть проекта. Все правки делай в ней: пути файлов задач начинаются с «${focus}/» (например ${focus}/app/layout.tsx).`] : []),
+      renderHits(hits, q),
+    ].filter(Boolean).join('\n\n');
     if (hits.length) this.journal.record({ type: 'context', files: hits.map((h) => h.file) });
     const recipes = pickRecipes(this.o.goal, this.map.tags ?? this.map.dependencies ?? []);
     if (recipes.length) this.journal.record({ type: 'recipe', names: recipes.map((r) => r.name) });
@@ -1631,7 +1642,7 @@ export class Pipeline {
     // node_modules мог появиться только сейчас — даём ссылку и рабочей копии
     this.ws.linkDependencies(t.workdir!);
     const versions = Object.fromEntries(t.install!.map((spec) => [pkgName(spec), this.installed_.get(pkgName(spec)) ?? '*']));
-    addDependencies(path.join(t.workdir!, nodeDir), versions);
+    addDependencies(path.join(t.workdir!, nodeDir), { ...versions, ...missingPeers(path.join(this.o.repo, nodeDir), Object.keys(versions)) });
     // поставилось только с --legacy-peer-deps — то же нужно и npm install в Docker и у человека: пишем это в .npmrc проекта
     if (this.legacyPeers) {
       const npmrc = path.join(t.workdir!, nodeDir, '.npmrc');
@@ -1641,6 +1652,71 @@ export class Pipeline {
       if (!t.files.includes(rel)) t.files.push(rel);
     }
     return true;
+  }
+
+  /**
+   * Перед доставкой: всё, что импортирует код ветки сборки, должно быть в package.json своей части — вместе с обязательными peer.
+   * Пакет мог встать в node_modules по задаче, которая потом ушла человеку, а код других задач его уже использует:
+   * у человека всё работает (node_modules общий), а в Docker после `npm install` — «Module not found».
+   */
+  private async declareDependencies(): Promise<void> {
+    const parts = (this.map?.stacks ?? []).filter((s) => s.id === 'node').map((s) => s.dir);
+    if (!parts.length || !this.runBase) return;
+    const changed = (await git(this.o.repo, ['diff', '--name-only', '--diff-filter=AM', this.runBase, this.ws.integration])).split('\n').filter(Boolean);
+    const code = changed.filter((f) => /\.(m|c)?[jt]sx?$|\.vue$|\.svelte$/.test(f));
+    if (!code.length) return;
+    const fixes: { dir: string; add: Record<string, string>; imported: string[]; peers: string[] }[] = [];
+    const unknown = new Set<string>();
+    const claimed: string[] = [];
+    for (const dir of [...parts].sort((a, b) => b.length - a.length)) {
+      // файл принадлежит самой глубокой части: web/app/… — части web, а не корню
+      const mine = code.filter((f) => (dir ? f.startsWith(`${dir}/`) : true) && !claimed.some((c) => f.startsWith(`${c}/`)));
+      if (dir) claimed.push(dir);
+      if (!mine.length) continue;
+      const pjText = await git(this.o.repo, ['show', `${this.ws.integration}:${dir ? `${dir}/` : ''}package.json`], true).catch(() => '');
+      if (!pjText) continue;
+      let pkg: Record<string, Record<string, string> | undefined>;
+      try {
+        pkg = JSON.parse(pjText);
+      } catch {
+        continue;
+      }
+      const declared = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})]);
+      const imported = new Set<string>();
+      const used = new Set<string>();
+      for (const f of mine) {
+        const text = await git(this.o.repo, ['show', `${this.ws.integration}:${f}`], true).catch(() => '');
+        for (const p of importedPackageNames(text)) {
+          used.add(p);
+          if (!declared.has(p) && !declared.has(`@types/${p.replace(/^@/, '').replace('/', '__')}`)) imported.add(p);
+        }
+      }
+      const root = path.join(this.o.repo, dir);
+      const add: Record<string, string> = {};
+      for (const p of imported) {
+        const v = this.installed_.get(p) ?? installedVersion(root, p);
+        if (v) add[p] = v;
+        else unknown.add(p);
+      }
+      // обязательные peer пакетов, которые использует изменённый код, — и новых, и уже записанных (@mantine/core без @mantine/hooks)
+      const peers = missingPeers(root, [...used].filter((n) => installedVersion(root, n)), new Set([...declared, ...Object.keys(add)]));
+      if (Object.keys(add).length || Object.keys(peers).length) fixes.push({ dir, add: { ...add, ...peers }, imported: Object.keys(add), peers: Object.keys(peers) });
+    }
+    if (unknown.size) this.journal.record({ type: 'self-help', taskId: '—', what: `код импортирует ${[...unknown].join(', ')}, а этих пакетов нет ни в package.json, ни в node_modules — проект у тебя не соберётся, пока их не поставить` });
+    if (!fixes.length) return;
+    const wt = await this.ws.integrationWorktree();
+    try {
+      await git(wt, ['checkout', '-q', '-B', `${this.ws.integration}-deps`, this.ws.integration]);
+      for (const x of fixes) addDependencies(path.join(wt, x.dir), x.add);
+      const what = fixes.map((x) => `${x.dir ? `${x.dir}/` : ''}package.json: ${[...x.imported, ...x.peers.map((p) => `${p} (обязательная peer-зависимость)`)].join(', ')}`).join('; ');
+      if (await this.ws.commitAll(wt, `AgentYard: зависимости в package.json\n\n${what}`)) {
+        await git(this.o.repo, ['update-ref', `refs/heads/${this.ws.integration}`, await git(wt, ['rev-parse', 'HEAD'])]);
+        this.journal.record({ type: 'self-help', taskId: '—', what: `код использует пакеты, которых не было в package.json, — дописал, иначе в Docker и у других после npm install не соберётся: ${what}` });
+      }
+    } finally {
+      await this.ws.removeWorktree(wt);
+      await git(this.o.repo, ['branch', '-D', `${this.ws.integration}-deps`], true);
+    }
   }
 
   private noteCommands(t: Task): void {

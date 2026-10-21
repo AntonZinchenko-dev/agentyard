@@ -13,7 +13,7 @@
     "typescript"
   ],
   "author": "Anton Zinchenko",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "type": "module",
   "private": true,
   "engines": {

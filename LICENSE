@@ -1,21 +1,29 @@
-MIT License
+Copyright (c) 2026 Anton Zinchenko. All rights reserved.
 
-Copyright (c) 2026 Anton Zinchenko
+This software and its source code ("the Software") are proprietary.
+The source code is published for viewing only.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Without prior written permission from the copyright holder, you may not:
+  - use, run or deploy the Software, in whole or in part;
+  - copy, modify, merge or create derivative works;
+  - distribute, publish, sublicense, sell or otherwise make the Software available to others;
+  - use the Software or its parts to train or evaluate machine learning models.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Viewing the repository and forking it on GitHub are permitted only to the
+extent required by the GitHub Terms of Service; no other rights are granted.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
+
+For permission requests: antonzinchenkowebdev@gmail.com
+
+---
+
+© 2026 Антон Зинченко. Все права защищены.
+
+Программа и её исходный код — собственность автора. Код открыт только для просмотра.
+Без письменного разрешения автора запрещено использовать, запускать, копировать,
+изменять, распространять, продавать программу или её части, а также использовать
+их для обучения или оценки моделей машинного обучения.
+Разрешения: antonzinchenkowebdev@gmail.com

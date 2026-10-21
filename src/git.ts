@@ -36,6 +36,19 @@ export async function gitOk(cwd: string, args: string[]): Promise<boolean> {
 
 const AUTHOR =['-c', 'user.name=AgentYard', '-c', 'user.email=agentyard@localhost'];
 
+/**
+ * Папка внутри чужого git-репозитория (web/ в репозитории всего проекта): работать нужно от корня репозитория,
+ * иначе пути задач (app/layout.tsx) лягут в корень репозитория, а не в web/. Возвращает корень и папку относительно него.
+ */
+export async function gitScope(dir: string): Promise<{ root: string; focus: string } | null> {
+  const top = await git(dir, ['rev-parse', '--show-toplevel'], true);
+  if (!top) return null;
+  const root = path.resolve(top);
+  const rel = path.relative(root, path.resolve(dir));
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return null;
+  return { root, focus: rel.split(path.sep).join('/') };
+}
+
 export async function isRepo(dir: string): Promise<boolean> {
   return (await git(dir, ['rev-parse', '--is-inside-work-tree'], true)) === 'true';
 }

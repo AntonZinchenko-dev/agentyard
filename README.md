@@ -7,7 +7,7 @@
 
 [English version](README.en.md)
 
-![Node 22.6+](https://img.shields.io/badge/node-22.6%2B-3c873a) ![TypeScript](https://img.shields.io/badge/TypeScript-без%20сборки-3178c6) ![Electron](https://img.shields.io/badge/приложение-Electron-47848f) ![Зависимости: 0](https://img.shields.io/badge/зависимости-0-555) ![Лицензия: MIT](https://img.shields.io/badge/лицензия-MIT-blue)
+![Node 22.6+](https://img.shields.io/badge/node-22.6%2B-3c873a) ![TypeScript](https://img.shields.io/badge/TypeScript-без%20сборки-3178c6) ![Electron](https://img.shields.io/badge/приложение-Electron-47848f) ![Зависимости: 0](https://img.shields.io/badge/зависимости-0-555) ![Лицензия: закрытая](https://img.shields.io/badge/лицензия-закрытая-b03a2e)
 
 ![Ход работы: этапы, задачи и та, что ждёт тебя](docs/screenshots/04-stuck.png)
 
@@ -113,7 +113,7 @@ ay run --repo C:\путь\к\проекту --goal "добавь экспорт 
 | `src/runtime/` | Ollama (поток, обрыв по «Стопу») и учебная модель для тестов |
 | `src/server.ts`, `ui/` | Локальный сервер и интерфейс (обычный JS, без фреймворков) |
 | `electron/` | Оболочка приложения |
-| `test/` | 181 тест, в том числе повторы настоящих неудачных прогонов |
+| `test/` | 184 теста, в том числе повторы настоящих неудачных прогонов |
 
 ## Тесты
 
@@ -125,4 +125,4 @@ npm test
 
 ## Лицензия
 
-[MIT](LICENSE)
+Закрытая лицензия, все права защищены. Код открыт только для просмотра: использовать, копировать, изменять и распространять его без письменного разрешения автора нельзя. Подробно — в [LICENSE](LICENSE).

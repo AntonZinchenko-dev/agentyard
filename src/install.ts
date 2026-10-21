@@ -44,7 +44,16 @@ export async function installPackages(repo: string, specs: string[], timeoutMs =
   let last: InstallResult = { ok: false, output: '', versions: {} };
   for (const a of attempts) {
     last = await installOnce(repo, a.specs, a.legacy, timeoutMs);
-    if (last.ok) return a.note ? { ...last, output: `${a.note}\n${last.output}`, note: a.note } : last;
+    if (last.ok) {
+      // обязательные peer-зависимости (@mantine/core → @mantine/hooks) npm с --legacy-peer-deps сам не ставит — ставим явно
+      const peers = Object.entries(missingPeers(repo, Object.keys(last.versions))).map(([n]) => n);
+      if (peers.length) {
+        const more = await installOnce(repo, peers, a.legacy, timeoutMs);
+        Object.assign(last.versions, more.versions);
+        if (!more.ok) last = { ...last, output: `${last.output}\nобязательные peer-зависимости не встали (${peers.join(', ')}):\n${more.output}` };
+      }
+      return a.note ? { ...last, output: `${a.note}\n${last.output}`, note: a.note } : last;
+    }
     // 404, сеть, права — повторы с другими флагами не помогут
     if (!/ERESOLVE|peer dep|ETARGET|notarget|No matching version|conflicting peer/i.test(last.output)) return last;
   }
@@ -80,6 +89,48 @@ async function installOnce(repo: string, specs: string[], legacy: boolean, timeo
   return { ok: true, output: r.output.slice(-1500), versions };
 }
 
+/** Версия пакета, установленного в node_modules папки (null — не установлен). */
+export function installedVersion(dir: string, name: string): string | null {
+  const pj = path.join(dir, 'node_modules', ...name.split('/'), 'package.json');
+  if (!existsSync(pj)) return null;
+  try {
+    return (JSON.parse(readFileSync(pj, 'utf8')) as { version?: string }).version ?? '*';
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Обязательные peer-зависимости пакетов, которых нет среди самих пакетов: @mantine/core требует @mantine/hooks.
+ * Локально npm 7+ ставит их сам и молча, а `npm install --legacy-peer-deps` (так часто собирают в Docker) — нет:
+ * у человека работает, в контейнере «Can't resolve '@mantine/hooks'». Поэтому peer пишется в package.json явно.
+ * Необязательные (peerDependenciesMeta.optional) пропускаем. Возвращает имя → версия (установленная или диапазон из peer).
+ */
+export function missingPeers(dir: string, names: string[], declared: Set<string> = new Set()): Record<string, string> {
+  const out: Record<string, string> = {};
+  const queue = [...names];
+  const seen = new Set(names);
+  while (queue.length) {
+    const name = queue.shift()!;
+    const pj = path.join(dir, 'node_modules', ...name.split('/'), 'package.json');
+    if (!existsSync(pj)) continue;
+    let pkg: { peerDependencies?: Record<string, string>; peerDependenciesMeta?: Record<string, { optional?: boolean }> };
+    try {
+      pkg = JSON.parse(readFileSync(pj, 'utf8'));
+    } catch {
+      continue;
+    }
+    for (const [peer, range] of Object.entries(pkg.peerDependencies ?? {})) {
+      if (pkg.peerDependenciesMeta?.[peer]?.optional || seen.has(peer) || declared.has(peer)) continue;
+      seen.add(peer);
+      const v = installedVersion(dir, peer);
+      out[peer] = v ?? range;
+      queue.push(peer);
+    }
+  }
+  return out;
+}
+
 /** Дописать зависимости в package.json рабочей копии, сохранив отступы файла. */
 export function addDependencies(dir: string, versions: Record<string, string>): boolean {
   const file = path.join(dir, 'package.json');
@@ -90,7 +141,8 @@ export function addDependencies(dir: string, versions: Record<string, string>): 
   let changed = false;
   for (const [name, version] of Object.entries(versions)) {
     if (pkg.devDependencies?.[name] || pkg.dependencies?.[name]) continue;
-    pkg.dependencies = { ...(pkg.dependencies ?? {}), [name]: version === '*' ? '*' : `^${version}` };
+    // установленная версия (9.7.3) — с «^»; диапазон из peer (^19.2.0, >=18) — как есть
+    pkg.dependencies = { ...(pkg.dependencies ?? {}), [name]: version === '*' ? '*' : /^\d/.test(version) ? `^${version}` : version };
     changed = true;
   }
   if (!changed) return false;

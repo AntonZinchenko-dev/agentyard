@@ -7,7 +7,7 @@ No cloud, no API keys, no telemetry. Your code never leaves the machine.
 
 [Русская версия](README.md)
 
-![Node 22.6+](https://img.shields.io/badge/node-22.6%2B-3c873a) ![TypeScript](https://img.shields.io/badge/TypeScript-no%20build%20step-3178c6) ![Electron](https://img.shields.io/badge/desktop-Electron-47848f) ![Runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0-555) ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![Node 22.6+](https://img.shields.io/badge/node-22.6%2B-3c873a) ![TypeScript](https://img.shields.io/badge/TypeScript-no%20build%20step-3178c6) ![Electron](https://img.shields.io/badge/desktop-Electron-47848f) ![Runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0-555) ![License: proprietary](https://img.shields.io/badge/license-proprietary-b03a2e)
 
 ![The run board: stages, tasks and the one that needs you](docs/screenshots/04-stuck.png)
 
@@ -115,7 +115,7 @@ There are no runtime dependencies. Electron is only needed for the desktop windo
 | `src/runtime/` | Ollama adapter (streaming, abortable) and a scripted model for tests |
 | `src/server.ts`, `ui/` | Local API and the interface (plain JS, no framework) |
 | `electron/` | Desktop shell |
-| `test/` | 181 tests, including replays of real failed runs |
+| `test/` | 184 tests, including replays of real failed runs |
 
 ## Tests
 
@@ -127,4 +127,4 @@ The suite covers the engine module by module and replays real runs that once wen
 
 ## License
 
-[MIT](LICENSE)
+Proprietary, all rights reserved. The source is published for viewing only: using, copying, modifying or distributing it requires written permission from the author. See [LICENSE](LICENSE).
