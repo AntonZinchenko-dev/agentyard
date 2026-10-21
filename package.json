@@ -1,0 +1,38 @@
+{
+  "name": "agentyard",
+  "version": "0.2.0",
+  "description": "Local-first orchestrator for AI coding agents on open-weight models (Ollama). Plans in stages, checks every edit with real tools, shows where it got stuck. Electron + TypeScript, no cloud.",
+  "keywords": [
+    "ai-agents",
+    "orchestrator",
+    "ollama",
+    "local-llm",
+    "open-weight",
+    "coding-agent",
+    "electron",
+    "typescript"
+  ],
+  "author": "Anton Zinchenko",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "hw": "node --experimental-strip-types --no-warnings src/cli.ts hw",
+    "models": "node --experimental-strip-types --no-warnings src/cli.ts models",
+    "demo:create": "node --experimental-strip-types --no-warnings src/cli.ts demo",
+    "run": "node --experimental-strip-types --no-warnings src/cli.ts run",
+    "test": "node --experimental-strip-types --no-warnings --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "ui": "node --experimental-strip-types --no-warnings src/cli.ts ui",
+    "app": "electron ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2",
+    "electron": "^33.0.0"
+  },
+  "main": "electron/main.cjs"
+}

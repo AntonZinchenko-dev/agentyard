@@ -1,0 +1,342 @@
+[
+  {
+    "id": "qwen3.5-4b",
+    "ollamaTag": "qwen3.5:4b",
+    "paramsTotalB": 4,
+    "paramsActiveB": 4,
+    "memoryGbQ4": 3,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 262144,
+    "roles": {
+      "scout": 0.7,
+      "reporter": 0.7,
+      "analyst": 0.45,
+      "coder": 0.3,
+      "tester": 0.3,
+      "reviewer": 0.35,
+      "planner": 0.3
+    },
+    "thinking": "toggle"
+  },
+  {
+    "id": "qwen3.5-9b",
+    "ollamaTag": "qwen3.5:9b",
+    "paramsTotalB": 9,
+    "paramsActiveB": 9,
+    "memoryGbQ4": 6,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 262144,
+    "roles": {
+      "scout": 0.75,
+      "reporter": 0.75,
+      "analyst": 0.55,
+      "coder": 0.45,
+      "tester": 0.45,
+      "reviewer": 0.45,
+      "planner": 0.45
+    },
+    "thinking": "toggle"
+  },
+  {
+    "id": "gemma4-e4b",
+    "ollamaTag": "gemma4:e4b-it-qat",
+    "paramsTotalB": 8,
+    "paramsActiveB": 4.5,
+    "memoryGbQ4": 6.1,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 131072,
+    "roles": {
+      "scout": 0.7,
+      "reporter": 0.75,
+      "analyst": 0.45,
+      "coder": 0.35,
+      "tester": 0.35,
+      "reviewer": 0.4,
+      "planner": 0.35
+    },
+    "thinking": "toggle"
+  },
+  {
+    "id": "gemma4-12b",
+    "ollamaTag": "gemma4:12b-it-qat",
+    "paramsTotalB": 12,
+    "paramsActiveB": 12,
+    "memoryGbQ4": 7.5,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 262144,
+    "roles": {
+      "scout": 0.75,
+      "reporter": 0.8,
+      "analyst": 0.6,
+      "coder": 0.5,
+      "tester": 0.5,
+      "reviewer": 0.6,
+      "planner": 0.55
+    },
+    "thinking": "toggle"
+  },
+  {
+    "id": "gpt-oss-20b",
+    "ollamaTag": "gpt-oss:20b",
+    "paramsTotalB": 21,
+    "paramsActiveB": 3.6,
+    "memoryGbQ4": 14,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 131072,
+    "roles": {
+      "scout": 0.75,
+      "reporter": 0.75,
+      "analyst": 0.7,
+      "coder": 0.6,
+      "tester": 0.6,
+      "reviewer": 0.75,
+      "planner": 0.75
+    },
+    "thinking": "levels"
+  },
+  {
+    "id": "gemma4-26b-a4b",
+    "ollamaTag": "gemma4:26b-a4b-it-qat",
+    "paramsTotalB": 26,
+    "paramsActiveB": 4,
+    "memoryGbQ4": 17,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 262144,
+    "roles": {
+      "scout": 0.8,
+      "reporter": 0.8,
+      "analyst": 0.7,
+      "coder": 0.6,
+      "tester": 0.6,
+      "reviewer": 0.7,
+      "planner": 0.65
+    },
+    "thinking": "toggle"
+  },
+  {
+    "id": "devstral-small-2",
+    "ollamaTag": "devstral-small-2",
+    "paramsTotalB": 24,
+    "paramsActiveB": 24,
+    "memoryGbQ4": 15,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 262144,
+    "roles": {
+      "scout": 0.75,
+      "reporter": 0.7,
+      "analyst": 0.75,
+      "coder": 0.8,
+      "tester": 0.75,
+      "reviewer": 0.65,
+      "planner": 0.65
+    }
+  },
+  {
+    "id": "qwen3.8-27b",
+    "ollamaTag": "qwen3.8:27b",
+    "paramsTotalB": 27,
+    "paramsActiveB": 27,
+    "memoryGbQ4": 18,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 262144,
+    "roles": {
+      "scout": 0.85,
+      "reporter": 0.85,
+      "analyst": 0.85,
+      "coder": 0.85,
+      "tester": 0.8,
+      "reviewer": 0.8,
+      "planner": 0.85
+    },
+    "thinking": "toggle"
+  },
+  {
+    "id": "qwen3.6-35b-a3b",
+    "ollamaTag": "qwen3.6",
+    "paramsTotalB": 35,
+    "paramsActiveB": 3,
+    "memoryGbQ4": 23,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 131072,
+    "roles": {
+      "scout": 0.85,
+      "reporter": 0.85,
+      "analyst": 0.8,
+      "coder": 0.9,
+      "tester": 0.8,
+      "reviewer": 0.7,
+      "planner": 0.7
+    },
+    "thinking": "toggle"
+  },
+  {
+    "id": "qwen3-coder-next",
+    "ollamaTag": "qwen3-coder-next",
+    "paramsTotalB": 80,
+    "paramsActiveB": 3,
+    "memoryGbQ4": 46,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 262144,
+    "roles": {
+      "scout": 0.85,
+      "reporter": 0.8,
+      "analyst": 0.85,
+      "coder": 0.95,
+      "tester": 0.85,
+      "reviewer": 0.75,
+      "planner": 0.8
+    }
+  },
+  {
+    "id": "llama3.1-8b",
+    "ollamaTag": "llama3.1:8b",
+    "paramsTotalB": 8,
+    "paramsActiveB": 8,
+    "memoryGbQ4": 4.9,
+    "license": "Llama 3.1 Community",
+    "toolCalling": true,
+    "contextMax": 131072,
+    "roles": {
+      "scout": 0.5,
+      "reporter": 0.6,
+      "analyst": 0.3,
+      "coder": 0.2,
+      "tester": 0.2,
+      "reviewer": 0.3,
+      "planner": 0.25
+    },
+    "legacy": true
+  },
+  {
+    "id": "qwen2.5-coder-7b",
+    "ollamaTag": "qwen2.5-coder:7b",
+    "paramsTotalB": 7.6,
+    "paramsActiveB": 7.6,
+    "memoryGbQ4": 4.7,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 32768,
+    "roles": {
+      "scout": 0.5,
+      "reporter": 0.5,
+      "analyst": 0.35,
+      "coder": 0.35,
+      "tester": 0.35,
+      "reviewer": 0.3,
+      "planner": 0.25
+    },
+    "legacy": true
+  },
+  {
+    "id": "qwen2.5-coder-14b",
+    "ollamaTag": "qwen2.5-coder:14b",
+    "paramsTotalB": 14.8,
+    "paramsActiveB": 14.8,
+    "memoryGbQ4": 9,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 32768,
+    "roles": {
+      "scout": 0.6,
+      "reporter": 0.6,
+      "analyst": 0.45,
+      "coder": 0.5,
+      "tester": 0.45,
+      "reviewer": 0.45,
+      "planner": 0.4
+    },
+    "legacy": true
+  },
+  {
+    "id": "qwen3-8b",
+    "ollamaTag": "qwen3:8b",
+    "paramsTotalB": 8.2,
+    "paramsActiveB": 8.2,
+    "memoryGbQ4": 5.2,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 40960,
+    "roles": {
+      "scout": 0.65,
+      "reporter": 0.65,
+      "analyst": 0.45,
+      "coder": 0.4,
+      "tester": 0.4,
+      "reviewer": 0.45,
+      "planner": 0.4
+    },
+    "legacy": true,
+    "thinking": "toggle"
+  },
+  {
+    "id": "qwen3-14b",
+    "ollamaTag": "qwen3:14b",
+    "paramsTotalB": 14.8,
+    "paramsActiveB": 14.8,
+    "memoryGbQ4": 9.3,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 40960,
+    "roles": {
+      "scout": 0.7,
+      "reporter": 0.7,
+      "analyst": 0.55,
+      "coder": 0.5,
+      "tester": 0.5,
+      "reviewer": 0.55,
+      "planner": 0.5
+    },
+    "legacy": true,
+    "thinking": "toggle"
+  },
+  {
+    "id": "qwen2.5-7b",
+    "ollamaTag": "qwen2.5:7b",
+    "paramsTotalB": 7.6,
+    "paramsActiveB": 7.6,
+    "memoryGbQ4": 4.7,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 32768,
+    "roles": {
+      "scout": 0.5,
+      "reporter": 0.55,
+      "analyst": 0.35,
+      "coder": 0.3,
+      "tester": 0.3,
+      "reviewer": 0.35,
+      "planner": 0.3
+    },
+    "legacy": true
+  },
+  {
+    "id": "qwen2.5-14b",
+    "ollamaTag": "qwen2.5:14b",
+    "paramsTotalB": 14.8,
+    "paramsActiveB": 14.8,
+    "memoryGbQ4": 9,
+    "license": "Apache-2.0",
+    "toolCalling": true,
+    "contextMax": 32768,
+    "roles": {
+      "scout": 0.6,
+      "reporter": 0.65,
+      "analyst": 0.45,
+      "coder": 0.4,
+      "tester": 0.4,
+      "reviewer": 0.5,
+      "planner": 0.4
+    },
+    "legacy": true
+  }
+]

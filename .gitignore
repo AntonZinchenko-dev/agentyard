@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# AgentYard run data and local state
+.agentyard/
+eval-runs/
+out/
+
+# generated demo projects (ay demo / run-*.bat)
+agentyard-demo/
+agentyard-shop/
+agentyard-web/
+
+# local leftovers
+_to_delete/
+_webcopy.tgz
+portfolio/
+
+# build / logs / OS
+dist/
+*.log
+Thumbs.db
+desktop.ini
+.DS_Store
