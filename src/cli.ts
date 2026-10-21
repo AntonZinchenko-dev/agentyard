@@ -216,7 +216,15 @@ async function cmdRun(argv: string[]): Promise<void> {
     resume: !!values['resume-id'],
   });
 
-  const res = await pipeline.run();
+  // Ctrl+C: первый раз — «Стоп» (прогон доделывает идущее и выгружает модели из видеопамяти), второй — выйти сразу
+  let interrupts = 0;
+  const onInterrupt = () => {
+    if (++interrupts > 1) process.exit(130);
+    console.log('\nОстанавливаю прогон и выгружаю модели… (ещё раз Ctrl+C — выйти сразу)');
+    pipeline.stop();
+  };
+  process.on('SIGINT', onInterrupt);
+  const res = await pipeline.run().finally(() => process.off('SIGINT', onInterrupt));
   console.log('\n— Итог —');
   console.log(`Готово: ${res.done.length} · ждут человека: ${res.human.length} · смен моделей: ${res.swaps} · ${(res.seconds / 60).toFixed(1)} мин`);
   console.log(`Ветка с изменениями: ${res.branch}`);
@@ -282,6 +290,15 @@ async function cmdUi(argv: string[]): Promise<void> {
   if (values.ready) console.log(`AY_READY ${JSON.stringify({ url: srv.url })}`);
   console.log(`Интерфейс AgentYard: ${srv.url}`);
   console.log('Окно консоли не закрывай — это и есть сервер. Остановить: Ctrl+C.');
+  // выход по Ctrl+C или закрытию окна консоли: остановить идущий прогон, чтобы он выгрузил модели из видеопамяти
+  let leaving = false;
+  const leave = () => {
+    if (leaving) process.exit(130);
+    leaving = true;
+    console.log('Останавливаю прогон и выгружаю модели…');
+    srv.shutdown().finally(() => process.exit(0));
+  };
+  for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK'] as const) process.on(sig, leave);
   if (!values['no-open']) {
     const { spawn } = await import('node:child_process');
     const opener = process.platform === 'win32' ? ['rundll32', ['url.dll,FileProtocolHandler', srv.url]] : process.platform === 'darwin' ? ['open', [srv.url]] : ['xdg-open', [srv.url]];

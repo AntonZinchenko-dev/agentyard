@@ -1,91 +1,89 @@
 # AgentYard
 
-**A local-first orchestrator for AI coding agents on open-weight models.**
-Give it a folder and a goal written the way you'd say it out loud. AgentYard plans the work in stages, runs small agents on your own GPU through [Ollama](https://ollama.com), checks every edit with real tools (type checker, tests, linters), and shows you exactly where it got stuck when it does — so you can paste a hint and let it continue.
+**Локальный оркестратор ИИ-агентов на открытых моделях.**
+Указываешь папку и пишешь цель обычными словами. AgentYard сам разбивает работу на этапы и гоняет небольшие модели на твоей видеокарте через [Ollama](https://ollama.com). Каждую правку он проверяет настоящими инструментами: типами, тестами, линтером. Если агенты застряли, видно, на чём именно: подсказываешь решение, и работа идёт дальше.
 
-No cloud, no API keys, no telemetry. Your code never leaves the machine.
+Без облака, без ключей API, без телеметрии. Код не покидает компьютер.
 
-[Русская версия](README.ru.md)
+[English version](README.en.md)
 
-![Node 22.6+](https://img.shields.io/badge/node-22.6%2B-3c873a) ![TypeScript](https://img.shields.io/badge/TypeScript-no%20build%20step-3178c6) ![Electron](https://img.shields.io/badge/desktop-Electron-47848f) ![Runtime deps: 0](https://img.shields.io/badge/runtime%20deps-0-555) ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![Node 22.6+](https://img.shields.io/badge/node-22.6%2B-3c873a) ![TypeScript](https://img.shields.io/badge/TypeScript-без%20сборки-3178c6) ![Electron](https://img.shields.io/badge/приложение-Electron-47848f) ![Зависимости: 0](https://img.shields.io/badge/зависимости-0-555) ![Лицензия: MIT](https://img.shields.io/badge/лицензия-MIT-blue)
 
-![The run board: stages, tasks and the one that needs you](docs/screenshots/04-stuck.png)
+![Ход работы: этапы, задачи и та, что ждёт тебя](docs/screenshots/04-stuck.png)
 
-> The interface is in Russian. The screenshots come from a demo project with a scripted model; on Windows the UI uses Bahnschrift and Segoe UI.
+> Скриншоты сняты на учебном проекте с заготовленными ответами модели. В Windows заголовки набраны шрифтом Bahnschrift, текст — Segoe UI.
 
-## Why
+## Зачем
 
-Small local models (7–35B) can write code, but left alone in a real project they fail in predictable ways. They wander, repeat the same broken patch, and blame the project for failures they didn't cause. Then they hand you a pile of output instead of a clear question.
+Небольшие локальные модели (7–35B) умеют писать код, но в настоящем проекте без присмотра ошибаются одинаково. Бродят по файлам, по кругу присылают одну и ту же неверную правку, путают свои ошибки со старыми ошибками проекта. В итоге отдают человеку простыню вывода вместо понятного вопроса.
 
-AgentYard is the scaffolding that makes them useful. The program does everything that doesn't need a model: it finds where the change goes, repeats one solution across many similar files, runs the checks, and decides whose fault a failure is. The models only get small, concrete steps.
+AgentYard — обвязка, которая делает их полезными. Всё, что можно без модели, делает программа: находит место правки, повторяет одно решение во всех однотипных файлах, запускает проверки, разбирает, чья неудача. Моделям достаются маленькие конкретные шаги.
 
-## What it does
+## Что умеет
 
-- **Plans in stages you can read.** A sloppy goal like «подтяни юай кит, замени таблицы, сделай красивую шапку» becomes three to five named stages with small tasks. Duplicate tasks are merged. Large plans wait for your approval.
-- **Checks every edit for real.** Syntax, linter, type checker and tests run on each change. The checks belong to the part of the project the files live in, so a `web/` task is never judged by the Go tests in `backend/`.
-- **Blames only new failures.** If a command was already red before the run, AgentYard runs it once on the original code and compares failures key by key. A task fails only for what it broke.
-- **Works out whose failure it is.** Before retrying, it classifies the failure:
-  - a missing package is installed by the program, without spending an attempt;
-  - an Ollama hiccup is retried for free;
-  - a model that is converging keeps its turn;
-  - a model repeating the same patch gets a second opinion right away.
-- **Asks for help precisely.** When a task gets stuck, its panel shows the check that failed, the exact errors with file and line, and what was already tried. You paste a fix or a hint, and the agents continue with it.
-- **Treats GPU swaps as a cost.** Loading another model takes 7–20 s. The scheduler compares expected seconds to success, splits the load time across all the steps a model will do while loaded, and only interrupts a model's batch when waiting would cost more.
-- **Repeats one solution across similar files.** When the same edit is needed in 15 list pages, a model makes it once. The program learns the edit as rules and replays it everywhere else, and only the files where it doesn't fit go back to a model.
-- **Handles documents and data too.** It reads docx, xlsx, pptx, html, csv, json and text-based PDFs for you. A summary of a 200-page report is split into parts and merged back. Results go to `out/` and are checked for format.
-- **Keeps your project safe.** All work happens on a separate git branch. You apply the result in one click and can undo it.
+- **Понятный план.** Цель вроде «подтяни юай кит, замени таблицы, сделай красивую шапку» превращается в 3–5 названных этапов с маленькими задачами. Одинаковые задачи склеиваются. Большой план ждёт твоего утверждения.
+- **Настоящие проверки.** Каждую правку проверяют синтаксис, линтер, типы и тесты той части проекта, где лежат её файлы. Задачу про `web/` не судят тестами бэкенда на Go.
+- **Задача отвечает только за новые ошибки.** Если проверка была красной ещё до прогона, программа один раз запускает её на исходном коде и сравнивает падения.
+- **Разбор неудачи перед повтором.** Программа сначала выясняет, чья ошибка:
+  - нет пакета — программа ставит его сама, попытка не тратится;
+  - Ollama сбоила — повтор без траты попытки;
+  - модель сходится — остаётся на той же ступени;
+  - модель прислала ту же правку второй раз — сразу подключается аналитик.
+- **«На чём споткнулись».** В панели задачи видно, на какой проверке остановились, какие ошибки (файл и строка) и что уже пробовали. Вставляешь решение или подсказку — агенты продолжают с ней.
+- **Смена модели — это цена.** Загрузить другую модель — 7–20 секунд. Планировщик считает, сколько секунд в среднем уйдёт до успеха. Время загрузки делится на все шаги, которые модель сделает подряд. Модель прерывают ради другой, только если ждать дороже.
+- **Одно решение — во все однотипные файлы.** Если одна и та же правка нужна в 15 страницах, модель делает её один раз. Программа выводит из неё правила и повторяет в остальных файлах; туда, где правило не подошло, снова идёт модель.
+- **Документы и данные.** Программа сама читает docx, xlsx, pptx, html, csv, json и PDF, если в нём есть текст. Большой документ режется на части и собирается в итог. Результат кладётся в `out/` и проверяется по формату.
+- **Проект в безопасности.** Работа идёт в отдельной git-ветке. Результат применяется одной кнопкой и откатывается. В конце прогона модели выгружаются из видеопамяти.
 
-## Screenshots
+## Скриншоты
 
 | | |
 |---|---|
-| ![New task](docs/screenshots/01-new-task.png) **New task:** a folder, a goal in plain words, and a readiness check of what can be verified. | ![Plan](docs/screenshots/02-plan.png) **Plan:** how the goal was understood, stages and tasks, packages to install. |
-| ![Progress](docs/screenshots/03-progress.png) **Live run:** stages as stations on one track, what each model is doing right now, the journal. | ![Result](docs/screenshots/05-result.png) **Result:** the goal check, what's ready, what needs you, and one-click apply. |
-| ![Stuck task, dark theme](docs/screenshots/06-dark.png) **Dark theme**, with the panel for a stuck task. | ![Stuck task](docs/screenshots/04-stuck.png) **Where it got stuck:** the error with file and line, what was tried, and a field for your fix. |
+| ![Новая задача](docs/screenshots/01-new-task.png) **Новая задача:** папка, цель обычными словами и проверка, чем программа сможет проверять работу. | ![План](docs/screenshots/02-plan.png) **План:** как понята цель, этапы и задачи, какие пакеты поставит. |
+| ![Ход работы](docs/screenshots/03-progress.png) **Ход работы:** этапы на одной линии, что каждая модель делает прямо сейчас, журнал. | ![Результат](docs/screenshots/05-result.png) **Результат:** приёмка по цели, что готово, что ждёт тебя, применение в проект одной кнопкой. |
+| ![Тёмная тема](docs/screenshots/06-dark.png) **Тёмная тема** и панель застрявшей задачи. | ![Застрявшая задача](docs/screenshots/04-stuck.png) **На чём споткнулись:** ошибка с файлом и строкой, что пробовали, поле для подсказки. |
 
-## How it works
+## Как устроено
 
 ```mermaid
 flowchart LR
-  G[Goal in plain words] --> P[Planner<br/>stages · small tasks · dedupe]
-  P --> S{Scheduler<br/>seconds to success<br/>incl. model swaps}
-  S --> A[Agent on local model<br/>direct JSON patches]
-  A --> C[Checks of the task's part<br/>syntax · lint · types · tests<br/>vs. original state]
-  C -- pass --> R[Review] --> M[Merge to run branch]
-  C -- fail --> T[Triage<br/>own · collateral · environment · format · infra]
-  T -- environment --> F[Program fixes it<br/>install package, retry] --> C
-  T -- model's own --> L[Next step<br/>retry · candidates · analyst · split · stronger model]
+  G[Цель обычными словами] --> P[Планировщик<br/>этапы · маленькие задачи · без дублей]
+  P --> S{Расписание<br/>секунды до успеха<br/>с учётом смены модели}
+  S --> A[Агент на локальной модели<br/>правка в JSON]
+  A --> C[Проверки своей части проекта<br/>синтаксис · линтер · типы · тесты<br/>в сравнении с исходным кодом]
+  C -- прошла --> R[Ревью] --> M[Слияние в ветку прогона]
+  C -- не прошла --> T[Разбор<br/>своя · задела соседей · окружение · формат · сбой]
+  T -- окружение --> F[Программа чинит сама<br/>ставит пакет, повторяет] --> C
+  T -- ошибка модели --> L[Следующий шаг<br/>повтор · варианты · аналитик · дробление · модель сильнее]
   L --> S
-  L -- still stuck --> H[You: paste a hint] --> S
-  M --> V[Goal check] --> O[Apply to project<br/>one click, undoable]
+  L -- всё ещё не выходит --> H[Ты: подсказка] --> S
+  M --> V[Приёмка по цели] --> O[Применить в проект<br/>одной кнопкой, с откатом]
 ```
 
-The details are in [docs/ENGINE.md](docs/ENGINE.md) (orchestration engine) and [docs/ALGORITHM.md](docs/ALGORITHM.md) (decomposition, pools, conveyor).
+Подробно: [docs/ENGINE.md](docs/ENGINE.md) — движок оркестрации, [docs/ALGORITHM.md](docs/ALGORITHM.md) — декомпозиция, пулы, конвейер, [docs/GUIDE.ru.md](docs/GUIDE.ru.md) — команды, файлы прогона, что где в коде.
 
-## Honest limits
+## Честные ограничения
 
-- Local models are much weaker than frontier cloud models at multi-file reasoning, library type puzzles and vague goals. AgentYard does well on narrow edits, repetitive changes across many files, documents and data. It will not build a feature from «make it pretty» on its own. It gets stuck less often, and when it does, it shows you exactly where.
-- One run at a time and one GPU. Tested on Windows with an RTX 5080 (16 GB) running `qwen3.6` and `gpt-oss:20b`.
-- PDF text extraction is best-effort. Scans need OCR first.
+- Локальные модели заметно слабее облачных там, где нужно думать сразу о нескольких файлах, разбираться в типах библиотек и понимать размытую цель. AgentYard хорош на точечных правках, однотипных изменениях по многим файлам, документах и данных. Сложную разработку по фразе «сделай красиво» он сам не вытянет. Но застревает реже, а когда застревает, показывает, где именно.
+- Один прогон за раз, одна видеокарта. Проверено в Windows на RTX 5080 (16 ГБ) с `qwen3.6` и `gpt-oss:20b`.
+- Текст из PDF — по возможности: из скана сначала нужно распознать текст.
 
-## Quick start (Windows)
+## Быстрый старт (Windows)
 
-You need:
-
-| What | Why |
+| Что | Зачем |
 |---|---|
-| [Node.js](https://nodejs.org) 22.6+ | runs the TypeScript sources directly, no build step |
-| git | run branches, task worktrees, undo |
-| [Ollama](https://ollama.com) | runs the models |
+| [Node.js](https://nodejs.org) 22.6+ | запускает TypeScript напрямую, без сборки |
+| git | ветки прогонов, рабочие копии задач, откат |
+| [Ollama](https://ollama.com) | запускает модели |
 
 ```bat
-git clone <this repo> agentyard
+git clone <адрес репозитория> agentyard
 cd agentyard
-start-app.bat        :: desktop window (installs Electron once, ~100 MB)
-start-ui.bat         :: or the same interface in your browser
+start-app.bat        :: окно приложения (один раз поставит Electron, ~100 МБ)
+start-ui.bat         :: или тот же интерфейс в браузере
 ```
 
-See what fits your GPU and pull models:
+Что влезет в видеокарту и как скачать модели:
 
 ```bat
 ay hw
@@ -93,38 +91,38 @@ ay models
 ay models pull qwen3.6
 ```
 
-Command line, without the UI:
+Без интерфейса, из командной строки:
 
 ```bat
-ay run --repo C:\path\to\project --goal "add CSV export of the orders report"
+ay run --repo C:\путь\к\проекту --goal "добавь экспорт отчёта по заказам в CSV"
 ```
 
-There are no runtime dependencies. Electron is only needed for the desktop window, and TypeScript only for `npm run typecheck`.
+Сторонних пакетов для работы нет. Electron нужен только для окна приложения, TypeScript — только для `npm run typecheck`.
 
-## Project layout
+## Что где в коде
 
-| Path | What |
+| Папка | Что там |
 |---|---|
-| `src/engine/` | Orchestration engine: project parts, baseline comparison, triage, policy, swap-aware scheduling, document extraction, «where it got stuck» |
-| `src/pipeline.ts` | Main loop: lanes, escalation ladder, merges, human hand-off |
-| `src/conveyor.ts`, `src/dispatcher.ts` | Task order, model epochs, scoring |
-| `src/plan.ts`, `src/planner.ts` | Plan validation, stages, merging duplicates, splitting |
-| `src/pools.ts`, `src/rules.ts` | Similar-task pools and replaying one solution |
-| `src/checks.ts` | Check cascade |
-| `src/agent.ts`, `skills/` | Agent prompts, roles, recipes, the learned-solutions notebook |
-| `src/runtime/` | Ollama adapter (streaming, abortable) and a scripted model for tests |
-| `src/server.ts`, `ui/` | Local API and the interface (plain JS, no framework) |
-| `electron/` | Desktop shell |
-| `test/` | 178 tests, including replays of real failed runs |
+| `src/engine/` | Движок: части проекта, сравнение с исходным кодом, разбор неудач, выбор следующего шага, расписание с учётом смены моделей, чтение документов, «на чём споткнулись» |
+| `src/pipeline.ts` | Главный цикл: лестница эскалации, слияния, передача человеку |
+| `src/conveyor.ts`, `src/dispatcher.ts` | Порядок задач, эпохи моделей, оценка «шаг + модель» |
+| `src/plan.ts`, `src/planner.ts` | Проверка плана, этапы, склейка дублей, дробление |
+| `src/pools.ts`, `src/rules.ts` | Однотипные задачи и повтор одного решения |
+| `src/checks.ts` | Каскад проверок |
+| `src/agent.ts`, `skills/` | Подсказки агентам, роли, рецепты, тетрадь найденных решений |
+| `src/runtime/` | Ollama (поток, обрыв по «Стопу») и учебная модель для тестов |
+| `src/server.ts`, `ui/` | Локальный сервер и интерфейс (обычный JS, без фреймворков) |
+| `electron/` | Оболочка приложения |
+| `test/` | 181 тест, в том числе повторы настоящих неудачных прогонов |
 
-## Tests
+## Тесты
 
 ```bat
 npm test
 ```
 
-The suite covers the engine module by module and replays real runs that once went wrong. One example: a Go + Next.js monorepo whose backend tests were red before the run.
+Движок проверяется по модулям, а настоящие неудачные прогоны повторяются целиком. Например, монорепо Go + Next.js, где тесты бэкенда были красными ещё до прогона.
 
-## License
+## Лицензия
 
 [MIT](LICENSE)

@@ -6,7 +6,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { ChatProgress, ChatRequest, ChatResponse, InstalledModel, Runtime } from './types.ts';
 
-const KEEP_ALIVE = '30m';
+// Сколько Ollama держит модель после последнего запроса. Прогон сам выгружает модели в конце (Pipeline.releaseModels),
+// это запас на случай, если процесс AgentYard убит и выгрузить некому: хватает на паузы между шагами (тесты, сборка).
+const KEEP_ALIVE = '10m';
 
 type RawChat = {
   message: ChatResponse['message'];

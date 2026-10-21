@@ -60,6 +60,7 @@ interface RunState {
   events: UiEvent[];
   approval: ((ok: boolean) => void) | null;
   finished: boolean;
+  done?: Promise<unknown>;
 }
 
 export interface StartedServer {
@@ -67,12 +68,24 @@ export interface StartedServer {
   port: number;
   token: string;
   close: () => Promise<void>;
+  /** Перед выходом: остановить идущий прогон и дождаться, пока он выгрузит модели из видеопамяти. */
+  shutdown: () => Promise<void>;
 }
 
 export async function startServer(opts: ServerOptions = {}): Promise<StartedServer> {
   const token = opts.token ?? randomBytes(18).toString('base64url');
   const clients = new Set<http.ServerResponse>();
   let run: RunState | null = null;
+  let shuttingDown = false;
+
+  async function shutdown(): Promise<void> {
+    shuttingDown = true;
+    if (!run || run.finished) return;
+    if (run.approval) run.approval(false);
+    else run.pipeline.stop();
+    // прогон сам выгружает модели в конце; ждём, но не вечно
+    await Promise.race([run.done?.catch(() => undefined), new Promise((r) => setTimeout(r, 25_000))]);
+  }
   let lastRun: RunState | null = null;
   const pulls = new Map<string, string>();
   const catalog = loadCatalog();
@@ -252,6 +265,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
     run = state;
     broadcast({ kind: 'run-begin', runId, repo, goal, mock });
     const done = state.pipeline.run();
+    state.done = done;
     done
       .then((result) => broadcast({ kind: 'result', result }))
       .catch((e: Error) => broadcast({ kind: 'error', message: e.message }))
@@ -262,6 +276,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
         const pending = state.pipeline.pendingHumanFixes().filter((x) => !closes.includes(x));
         const hints = state.pipeline.pendingHints();
         const retries = state.pipeline.pendingRetries().filter((x) => !(x in hints));
+        if (shuttingDown) return;
         if (pending.length || retries.length || closes.length || Object.keys(hints).length) startRun({ repo, goal, resumeId: runId, humanFixes: pending, retryTasks: retries, humanHints: hints, humanClose: closes, approve: 'never', autoApply: body.autoApply !== false, allowInstall: true, mock }).catch(() => undefined);
       });
     return { runId, done };
@@ -568,6 +583,10 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
           else run.pipeline.stop();
           return send(res, 200, { ok: true });
         }
+        case 'POST /api/shutdown': {
+          await shutdown();
+          return send(res, 200, { ok: true });
+        }
         case 'GET /api/current': {
           const r = run ?? lastRun;
           return send(res, 200, r ? { runId: r.runId, repo: r.repo, goal: r.goal, mock: r.mock, finished: r.finished, awaitingApproval: !!r.approval, events: r.events } : null);
@@ -678,6 +697,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<StartedServ
     url: `http://127.0.0.1:${port}/?t=${token}`,
     port,
     token,
+    shutdown,
     close: () =>
       new Promise<void>((resolve) => {
         for (const c of clients) c.end();

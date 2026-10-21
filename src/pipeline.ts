@@ -183,6 +183,8 @@ export class Pipeline {
   private map!: RepoMap;
   private mapText = '';
   private loadedTag: string | null = null;
+  /** Модели, которые этот прогон грузил или о чём-то спрашивал: в конце их нужно выгрузить. */
+  private usedTags = new Set<string>();
   private swaps = 0;
   private batchStartPending = false;
   private cpu: CpuLane;
@@ -288,9 +290,15 @@ export class Pipeline {
       },
       listInstalled: () => raw.listInstalled(),
       loaded: () => raw.loaded(),
-      load: (tag, numCtx, opts) => guard(raw.load(tag, numCtx, opts)),
+      load: (tag, numCtx, opts) => {
+        this.usedTags.add(tag);
+        return guard(raw.load(tag, numCtx, opts));
+      },
       unload: (tag) => raw.unload(tag),
-      chat: (req) => guard(raw.chat({ ...req, signal: req.signal ?? signal })),
+      chat: (req) => {
+        this.usedTags.add(req.model);
+        return guard(raw.chat({ ...req, signal: req.signal ?? signal }));
+      },
       ...(raw.pull ? { pull: (tag: string, onProgress?: (text: string) => void) => raw.pull!(tag, onProgress) } : {}),
       ...(raw.restart ? { restart: () => raw.restart!() } : {}),
     };
@@ -368,6 +376,32 @@ export class Pipeline {
   // ---------- подготовка: бригада, разведка, план ----------
 
   async run(): Promise<PipelineResult> {
+    try {
+      return await this.runAll();
+    } finally {
+      await this.releaseModels();
+    }
+  }
+
+  /**
+   * Конец прогона (готово, «Стоп», ошибка): модели, с которыми работал прогон, сразу выгружаются из видеопамяти.
+   * Без этого Ollama держит их ещё keep_alive минут — видеокарта и память заняты, хотя работы нет.
+   * Чужие модели (загруженные другими программами после прогона) не трогаем.
+   */
+  async releaseModels(): Promise<string[]> {
+    if (!this.usedTags.size) return [];
+    const full = (t: string) => (t.includes(':') ? t : `${t}:latest`);
+    const used = new Set([...this.usedTags].map(full));
+    const resident = await this.o.runtime.loaded().catch(() => [] as string[]);
+    const mine = resident.filter((t) => used.has(full(t)));
+    for (const tag of mine) await this.o.runtime.unload(tag).catch(() => undefined);
+    this.loadedTag = null;
+    this.usedTags.clear();
+    if (mine.length) this.journal?.record({ type: 'self-help', taskId: '—', what: `прогон закончен — выгрузил из видеопамяти: ${mine.join(', ')}` });
+    return mine;
+  }
+
+  private async runAll(): Promise<PipelineResult> {
     const runId = this.o.runId ?? new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
     const runDir = path.join(this.o.repo, '.agentyard', 'runs', runId);
     this.journal = new Journal(runDir, this.o.quiet, (st, line) => this.emit({ kind: 'journal', at: st.at, event: st.event, line }));

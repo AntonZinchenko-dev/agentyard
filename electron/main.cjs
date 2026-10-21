@@ -117,8 +117,26 @@ app.whenReady().then(async () => {
   }
 });
 
-app.on('before-quit', () => {
+// Выход: сначала просим ядро остановить прогон и выгрузить модели из видеопамяти (иначе Ollama держит их ещё
+// минуты после закрытия окна), потом гасим процесс ядра. Ждём не дольше 30 с.
+let released = false;
+app.on('before-quit', (e) => {
   app.isQuitting = true;
-  if (server && !server.killed) server.kill();
+  if (!server || server.killed) return;
+  if (!released && serverUrl) {
+    released = true;
+    e.preventDefault();
+    if (win && !win.isDestroyed()) win.hide();
+    const u = new URL(serverUrl);
+    const token = u.searchParams.get('t') || '';
+    fetch(new URL('/api/shutdown', u.origin), { method: 'POST', headers: { 'x-ay-token': token, 'content-type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(30_000) })
+      .catch(() => undefined)
+      .finally(() => {
+        if (server && !server.killed) server.kill();
+        app.quit();
+      });
+    return;
+  }
+  server.kill();
 });
 app.on('window-all-closed', () => app.quit());
